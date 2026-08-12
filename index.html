@@ -973,7 +973,7 @@ function renderIndicadores(){
 
   const filasPrioridad = PRIORIDAD.map(p => `<tr><td>${p}</td><td>${stats.porPrioridad[p]}</td></tr>`).join('');
 
-  const filasHorasTecnico = stats.filasHorasTecnico.length > 0 ? stats.filasHorasTecnico.map(f => `
+  const filasHorasTecnico = stats.filasHorasPorTecnico.length > 0 ? stats.filasHorasPorTecnico.map(f => `
     <tr><td>${escapeHtml(f.nombre)}</td><td>${f.dia.toFixed(1)} h</td><td>${f.semana.toFixed(1)} h</td></tr>`).join('')
     : `<tr><td colspan="3" style="color:var(--muted);text-align:center;">Sin horas registradas en el período seleccionado</td></tr>`;
 
