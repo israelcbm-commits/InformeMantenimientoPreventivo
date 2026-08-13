@@ -896,7 +896,8 @@ async function loadIndicadores(force){
     }
     renderIndicadores();
   }catch(e){
-    cont.innerHTML = '<div class="hist-empty"><span class="big">&#9888;</span>No se pudo cargar los indicadores. Revisa la conexión con Apps Script.</div>';
+    console.error('Error en Indicadores:', e);
+    cont.innerHTML = '<div class="hist-empty"><span class="big">&#9888;</span>No se pudo cargar los indicadores.<br><span style="font-family:var(--mono);font-size:11px;">' + escapeHtml(e && e.message ? e.message : String(e)) + '</span></div>';
   }
 }
 
