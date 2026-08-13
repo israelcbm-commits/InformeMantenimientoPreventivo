@@ -378,8 +378,8 @@ input[type=date],input[type=time],input[type=week],input[type=month]{cursor:poin
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0EDDSDDU7nkvj1UUNNB_lR1AvEZeO9GYjrPi1bmiIt_n5OXTBc62tvqRCPXB93uWkPw/exec";
 
 const AREAS = ["Maderas","Secador","Contiroll","Finalizado","Laminadora 1","Laminadora 2","Servicios industriales"];
-const TIPO_ACTIVIDAD = ["Preventivo Programado","Preventivo No Programado","Lubricación","Predictivo"];
-const TECNICA_PREDICTIVA = ["Vibraciones","Termografía","Análisis de Aceite","Medición de Espesores"];
+const TIPO_ACTIVIDAD = ["LILA","GAMA","CHECK LIST","PREVENTIVO PG","PREVENTIVO NPG","Lubricación","Predictivo"];
+const TECNICA_PREDICTIVA = ["Vibraciones","Termografía","Análisis de Aceite","Medición de Espesores","Tintas Penetrantes"];
 const HALLAZGO = ["Sí","No"];
 const PRIORIDAD = ["Baja","Media","Alta","Crítica"];
 const ESTADOS = ["Cerrado","Pendiente"];
@@ -900,6 +900,33 @@ async function loadIndicadores(force){
   }
 }
 
+/* ---------- estandarización de hallazgos para el Top 10 ----------
+   Agrupa textos parecidos bajo una misma etiqueta estándar (para que
+   "eje con desgaste", "eje rayado" y "eje con holgura" cuenten como un
+   solo hallazgo repetido). Para agregar más agrupaciones, añade otra
+   entrada al arreglo con su etiqueta y las palabras que la disparan. */
+const HALLAZGO_STANDARD_RULES = [
+  { label: 'Eje con pérdida de tolerancia', requiere: ['eje'], cualquiera: ['desgast','rayad','holgura','gastad','flojo','floja'] },
+  { label: 'Fuga de aceite', requiere: ['fuga'], cualquiera: ['aceite','lubricante','oleohidraulico','hidraulico'] },
+  { label: 'Rodamiento con ruido/vibración anormal', requiere: ['rodamiento'], cualquiera: ['ruido','vibra','desgast','danad','dañad'] },
+  { label: 'Fisura o grieta detectada', requiere: [], cualquiera: ['fisura','grieta','agrietad'] },
+  { label: 'Corrosión / oxidación', requiere: [], cualquiera: ['corrosion','oxidacion','oxidad'] },
+];
+
+function quitarTildes_(s){
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function normalizeHallazgoTexto_(texto){
+  const t = quitarTildes_(texto.toLowerCase());
+  for(const regla of HALLAZGO_STANDARD_RULES){
+    const cumpleRequiere = regla.requiere.every(k => t.includes(k));
+    const cumpleCualquiera = regla.cualquiera.some(k => t.includes(k));
+    if(cumpleRequiere && cumpleCualquiera) return regla.label;
+  }
+  return texto.trim(); // sin coincidencia: se agrupa por el texto original tal cual
+}
+
 function computeIndicadores(records, filtros){
   let total = 0;
   let conHallazgo = 0;
@@ -925,8 +952,9 @@ function computeIndicadores(records, filtros){
           if(act.prioridad && porPrioridad.hasOwnProperty(act.prioridad)) porPrioridad[act.prioridad]++;
           const texto = (act.accionSeguimiento || '').trim();
           if(texto){
-            const key = texto.toLowerCase();
-            if(!hallazgoTextos[key]) hallazgoTextos[key] = { texto, count:0 };
+            const label = normalizeHallazgoTexto_(texto);
+            const key = label.toLowerCase();
+            if(!hallazgoTextos[key]) hallazgoTextos[key] = { texto: label, count:0 };
             hallazgoTextos[key].count++;
           }
         }
