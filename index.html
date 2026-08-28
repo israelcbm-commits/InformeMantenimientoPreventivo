@@ -86,6 +86,13 @@ main{max-width:1080px;margin:0 auto;padding:28px 20px;}
 .field-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
 @media(max-width:720px){.field-grid{grid-template-columns:repeat(2,1fr);}}
 .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:5px;font-weight:600;}
+/* campo de hora en formato 24h (militar), autoformateado mientras se escribe */
+.hora24-input{
+  width:64px;padding:7px 8px;text-align:center;font-family:var(--mono);letter-spacing:0.5px;
+  background:#0d1217;border:1px solid var(--line);color:var(--text);border-radius:6px;font-size:12.5px;
+}
+.hora24-input:focus{outline:none;border-color:var(--amber);}
+
 input,select,textarea{
   width:100%;background:#0d1217;border:1px solid var(--line);color:var(--text);
   padding:9px 10px;border-radius:6px;font-family:var(--sans);font-size:13.5px;
@@ -109,7 +116,7 @@ input[type=date],input[type=time],input[type=week],input[type=month]{cursor:poin
 
 /* activity tables */
 .event-scroll{overflow-x:auto;}
-.event-table{width:100%;border-collapse:collapse;min-width:1620px;}
+.event-table{width:100%;border-collapse:collapse;min-width:1720px;}
 .event-table th{
   text-align:left;font-size:10.5px;text-transform:uppercase;color:var(--muted);
   letter-spacing:0.4px;padding:0 6px 8px;font-weight:600;white-space:nowrap;
@@ -407,8 +414,9 @@ function switchView(v){
 function activityRowHTML(id){
   return `
   <tr data-row="${id}">
-    <td><input type="time" data-f="horaIni"></td>
-    <td><input type="time" data-f="horaFin"></td>
+    <td><input type="text" class="tag" data-f="ot" placeholder="OT"></td>
+    <td><input type="text" class="hora24-input" data-f="horaIni" placeholder="HH:MM" maxlength="5" inputmode="numeric" oninput="formatearHora24_(this)" onblur="validarHora24_(this)"></td>
+    <td><input type="text" class="hora24-input" data-f="horaFin" placeholder="HH:MM" maxlength="5" inputmode="numeric" oninput="formatearHora24_(this)" onblur="validarHora24_(this)"></td>
     <td><input type="text" class="tag" data-f="tag" placeholder="EQUIPO"></td>
     <td><select data-f="tipo" onchange="onTipoChange(this)"><option value=""></option>${TIPO_ACTIVIDAD.map(t=>`<option>${t}</option>`).join('')}</select></td>
     <td><select data-f="tecnica" disabled><option value=""></option>${TECNICA_PREDICTIVA.map(t=>`<option>${t}</option>`).join('')}</select></td>
@@ -420,6 +428,31 @@ function activityRowHTML(id){
     <td><select data-f="estado"><option value=""></option>${ESTADOS.map(e=>`<option>${e}</option>`).join('')}</select></td>
     <td class="rm"><button class="rm-btn" onclick="this.closest('tr').remove()" type="button">&times;</button></td>
   </tr>`;
+}
+
+// Mientras el usuario escribe, inserta el ":" automáticamente (ej. "1445" -> "14:45")
+function formatearHora24_(input){
+  const cursorAlFinal = input.selectionStart === input.value.length;
+  let digitos = input.value.replace(/\D/g,'').slice(0,4);
+  if(digitos.length <= 2){
+    input.value = digitos;
+  }else{
+    input.value = digitos.slice(0,2) + ':' + digitos.slice(2);
+  }
+  if(cursorAlFinal) input.setSelectionRange(input.value.length, input.value.length);
+}
+
+// Al salir del campo, valida y corrige la hora (o la limpia si quedó incompleta)
+function validarHora24_(input){
+  const v = input.value.trim();
+  if(!v) return;
+  const digitos = v.replace(/\D/g,'');
+  if(digitos.length < 3){ input.value = ''; return; }
+  let h = parseInt(digitos.slice(0,2), 10);
+  let m = parseInt(digitos.slice(2,4) || '0', 10);
+  if(isNaN(h) || h > 23) h = 23;
+  if(isNaN(m) || m > 59) m = 59;
+  input.value = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
 }
 
 function onTipoChange(sel){
@@ -462,7 +495,7 @@ function buildAreas(){
         <div class="event-scroll">
           <table class="event-table" id="tbl-${safe}">
             <thead><tr>
-              <th>Hora inicio</th><th>Hora fin</th><th>EQUIPO</th><th>Tipo de actividad</th>
+              <th>OT</th><th>Hora inicio</th><th>Hora fin</th><th>EQUIPO</th><th>Tipo de actividad</th>
               <th>Técnica predictiva</th><th>Descripción / Observaciones</th><th>Repuestos/Insumos</th><th>¿Genera hallazgo?</th><th>Hallazgo / Acción de seguimiento</th><th>Prioridad</th><th>Estado</th><th></th>
             </tr></thead>
             <tbody id="body-${safe}"></tbody>
@@ -723,6 +756,7 @@ function buildSummaryText(rec){
       const rango = (act.horaIni||act.horaFin) ? `${act.horaIni||'—'}-${act.horaFin||'—'} ` : '';
       const dur = eventDuration(act.horaIni, act.horaFin);
       const partes = [
+        act.ot ? `OT ${act.ot}` : '',
         rango + (act.tag||'S/EQUIPO'),
         act.tipo,
         act.tipo==='Predictivo' && act.tecnica ? `Técnica: ${act.tecnica}` : '',
@@ -804,6 +838,7 @@ function renderModal(rec){
     rows.forEach(act=>{
       html += `<div class="mod-event">
         <div class="ev-top">
+          ${act.ot?`<span>OT ${escapeHtml(act.ot)}</span>`:''}
           ${act.tag?`<span>${escapeHtml(act.tag)}</span>`:''}
           ${act.tipo?`<span>${escapeHtml(act.tipo)}</span>`:''}
           <span class="ev-state ${act.estado||''}">${act.estado||''}</span>
@@ -964,7 +999,7 @@ function computeIndicadores(records, filtros){
           if(!horasPorTecnico[reportante]) horasPorTecnico[reportante] = { dia:0, semana:0 };
           if(filtros.day && fecha === filtros.day){
             horasDia += horas;
-            horasPorTecnico[reportante].dia = Math.min(horasPorTecnico[reportante].dia + horas, 8);
+            horasPorTecnico[reportante].dia += horas;
           }
           if(weekRange && fecha >= weekRange.start && fecha <= weekRange.end){
             horasSemana += horas;
@@ -1029,7 +1064,7 @@ function renderIndicadores(){
         <tbody>${filasHorasTecnico}</tbody>
       </table>
     </div>
-    <p style="color:var(--muted);font-size:11.5px;margin-top:8px;">* Calculado como la duración real de cada actividad, atribuida a quien reportó el informe (no se multiplica por cantidad de técnicos). El total diario se limita a 8 h (480 min) por turno. Total del día: ${stats.horasDia.toFixed(1)} h · Total de la semana: ${stats.horasSemana.toFixed(1)} h</p>
+    <p style="color:var(--muted);font-size:11.5px;margin-top:8px;">* Calculado como la duración real de cada actividad, atribuida a quien reportó el informe (no se multiplica por cantidad de técnicos). Total del día: ${stats.horasDia.toFixed(1)} h · Total de la semana: ${stats.horasSemana.toFixed(1)} h</p>
 
     <div class="ind-section-title">Top 10 hallazgos que más se repiten (todo el histórico)</div>
     <div class="ind-table-wrap">
