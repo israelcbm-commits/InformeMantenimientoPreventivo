@@ -116,7 +116,7 @@ input[type=date],input[type=time],input[type=week],input[type=month]{cursor:poin
 
 /* activity tables */
 .event-scroll{overflow-x:auto;}
-.event-table{width:100%;border-collapse:collapse;min-width:1720px;}
+.event-table{width:100%;border-collapse:collapse;min-width:1820px;}
 .event-table th{
   text-align:left;font-size:10.5px;text-transform:uppercase;color:var(--muted);
   letter-spacing:0.4px;padding:0 6px 8px;font-weight:600;white-space:nowrap;
@@ -418,6 +418,7 @@ function activityRowHTML(id){
     <td><input type="text" class="hora24-input" data-f="horaIni" placeholder="HH:MM" maxlength="5" inputmode="numeric" oninput="formatearHora24_(this)" onblur="validarHora24_(this)"></td>
     <td><input type="text" class="hora24-input" data-f="horaFin" placeholder="HH:MM" maxlength="5" inputmode="numeric" oninput="formatearHora24_(this)" onblur="validarHora24_(this)"></td>
     <td><input type="text" class="tag" data-f="tag" placeholder="EQUIPO"></td>
+    <td><input type="text" class="tag" data-f="codigoActividad" placeholder="Código"></td>
     <td><select data-f="tipo" onchange="onTipoChange(this)"><option value=""></option>${TIPO_ACTIVIDAD.map(t=>`<option>${t}</option>`).join('')}</select></td>
     <td><select data-f="tecnica" disabled><option value=""></option>${TECNICA_PREDICTIVA.map(t=>`<option>${t}</option>`).join('')}</select></td>
     <td class="col-desc"><textarea data-f="desc" placeholder="Descripción / Observaciones"></textarea></td>
@@ -495,7 +496,7 @@ function buildAreas(){
         <div class="event-scroll">
           <table class="event-table" id="tbl-${safe}">
             <thead><tr>
-              <th>OT</th><th>Hora inicio</th><th>Hora fin</th><th>EQUIPO</th><th>Tipo de actividad</th>
+              <th>OT</th><th>Hora inicio</th><th>Hora fin</th><th>EQUIPO</th><th>Código actividad</th><th>Tipo de actividad</th>
               <th>Técnica predictiva</th><th>Descripción / Observaciones</th><th>Repuestos/Insumos</th><th>¿Genera hallazgo?</th><th>Hallazgo / Acción de seguimiento</th><th>Prioridad</th><th>Estado</th><th></th>
             </tr></thead>
             <tbody id="body-${safe}"></tbody>
@@ -757,6 +758,7 @@ function buildSummaryText(rec){
       const dur = eventDuration(act.horaIni, act.horaFin);
       const partes = [
         act.ot ? `OT ${act.ot}` : '',
+        act.codigoActividad ? `Cód. ${act.codigoActividad}` : '',
         rango + (act.tag||'S/EQUIPO'),
         act.tipo,
         act.tipo==='Predictivo' && act.tecnica ? `Técnica: ${act.tecnica}` : '',
@@ -839,6 +841,7 @@ function renderModal(rec){
       html += `<div class="mod-event">
         <div class="ev-top">
           ${act.ot?`<span>OT ${escapeHtml(act.ot)}</span>`:''}
+          ${act.codigoActividad?`<span>Cód. ${escapeHtml(act.codigoActividad)}</span>`:''}
           ${act.tag?`<span>${escapeHtml(act.tag)}</span>`:''}
           ${act.tipo?`<span>${escapeHtml(act.tipo)}</span>`:''}
           <span class="ev-state ${act.estado||''}">${act.estado||''}</span>
